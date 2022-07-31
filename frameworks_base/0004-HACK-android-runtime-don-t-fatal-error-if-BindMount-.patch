@@ -1,0 +1,30 @@
+From c016bb3e4bd211611ecb533d0f2a0d260e69f87b Mon Sep 17 00:00:00 2001
+From: Shilin Victor <chrono.monochrome@gmail.com>
+Date: Thu, 14 Oct 2021 11:39:25 +0300
+Subject: [PATCH 04/18] HACK: android runtime: don't fatal error if BindMount
+ fails
+
+Change-Id: I97984adbf5411f9eab8f728017adc9b48e8696a8
+---
+ core/jni/com_android_internal_os_Zygote.cpp | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/core/jni/com_android_internal_os_Zygote.cpp b/core/jni/com_android_internal_os_Zygote.cpp
+index bed0aae074a4..1646878b14d2 100644
+--- a/core/jni/com_android_internal_os_Zygote.cpp
++++ b/core/jni/com_android_internal_os_Zygote.cpp
+@@ -784,8 +784,9 @@ static bool BindMount(const std::string& source_dir, const std::string& target_d
+ static void BindMount(const std::string& source_dir, const std::string& target_dir,
+                       fail_fn_t fail_fn) {
+   if (!BindMount(source_dir, target_dir)) {
+-    fail_fn(CREATE_ERROR("Failed to mount %s to %s: %s",
+-                         source_dir.c_str(), target_dir.c_str(), strerror(errno)));
++    ALOGE("%s: Failed to mount %s to %s: %s", __func__, source_dir.c_str(), target_dir.c_str(), strerror(errno));
++    /*fail_fn(CREATE_ERROR("Failed to mount %s to %s: %s",
++                         source_dir.c_str(), target_dir.c_str(), strerror(errno)));*/
+   }
+ }
+ 
+-- 
+2.37.1
+

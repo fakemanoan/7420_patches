@@ -1,0 +1,52 @@
+From 8f2f46910142944a0f476b8fec60b5ad18f9778d Mon Sep 17 00:00:00 2001
+From: Dominggoes Isakh <drjisakh@gmail.com>
+Date: Mon, 1 Nov 2021 21:22:06 +0100
+Subject: [PATCH 1/2] Support legacy kernel using
+ ro.kernel.ebpf.supported=false
+
+Change-Id: I106eac65098c66ac5575c88f107104aa70e77cac
+---
+ bpfloader/BpfLoader.cpp | 27 +++++++++++++++------------
+ 1 file changed, 15 insertions(+), 12 deletions(-)
+
+diff --git a/bpfloader/BpfLoader.cpp b/bpfloader/BpfLoader.cpp
+index 7a68894..cf6eb24 100644
+--- a/bpfloader/BpfLoader.cpp
++++ b/bpfloader/BpfLoader.cpp
+@@ -112,18 +112,21 @@ void createSysFsBpfSubDir(const char* const prefix) {
+ }
+ 
+ int main() {
+-    // Load all ELF objects, create programs and maps, and pin them
+-    for (const auto location : locations) {
+-        createSysFsBpfSubDir(location.prefix);
+-        if (loadAllElfObjects(location.dir, location.prefix) != 0) {
+-            ALOGE("=== CRITICAL FAILURE LOADING BPF PROGRAMS FROM %s ===", location.dir);
+-            ALOGE("If this triggers reliably, you're probably missing kernel options or patches.");
+-            ALOGE("If this triggers randomly, you might be hitting some memory allocation "
+-                  "problems or startup script race.");
+-            ALOGE("--- DO NOT EXPECT SYSTEM TO BOOT SUCCESSFULLY ---");
+-            sleep(20);
+-            return 2;
+-        }
++    bool ebpf_supported = android::base::GetBoolProperty("ro.kernel.ebpf.supported", false);
++    if (ebpf_supported) {
++        // Load all ELF objects, create programs and maps, and pin them
++        for (const auto location : locations) {
++            createSysFsBpfSubDir(location.prefix);
++            if (loadAllElfObjects(location.dir, location.prefix) != 0) {
++                ALOGE("=== CRITICAL FAILURE LOADING BPF PROGRAMS FROM %s ===", location.dir);
++                ALOGE("If this triggers reliably, you're probably missing kernel options or patches.");
++                ALOGE("If this triggers randomly, you might be hitting some memory allocation "
++                      "problems or startup script race.");
++                ALOGE("--- DO NOT EXPECT SYSTEM TO BOOT SUCCESSFULLY ---");
++                sleep(20);
++                return 2;
++             }
++         }
+     }
+ 
+     if (android::base::SetProperty("bpf.progs_loaded", "1") == false) {
+-- 
+2.37.1
+

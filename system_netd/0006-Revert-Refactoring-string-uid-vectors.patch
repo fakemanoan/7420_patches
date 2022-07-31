@@ -1,0 +1,427 @@
+From 1f4b2c4d10a4cf003c357d8bc7cb68376ffa416b Mon Sep 17 00:00:00 2001
+From: Dominggoes Isakh <drjisakh@gmail.com>
+Date: Tue, 14 Dec 2021 12:06:07 +0100
+Subject: [PATCH 6/9] Revert "Refactoring string uid vectors"
+
+This reverts commit 7920397d9760701554bad0d65464f1f41757d465.
+
+Change-Id: I3f42219db33d43ce8b55d7c0b2f20b9398bc129f
+---
+ server/BandwidthController.cpp   |  20 ++---
+ server/BandwidthController.h     |  10 +--
+ server/NetdNativeService.cpp     |  16 ++--
+ server/TrafficController.cpp     |  11 ++-
+ server/TrafficController.h       |   2 +-
+ server/TrafficControllerTest.cpp | 128 ++++++++++++++++---------------
+ 6 files changed, 99 insertions(+), 88 deletions(-)
+
+diff --git a/server/BandwidthController.cpp b/server/BandwidthController.cpp
+index b3a4fd88..cfce8c10 100644
+--- a/server/BandwidthController.cpp
++++ b/server/BandwidthController.cpp
+@@ -322,25 +322,25 @@ int BandwidthController::enableDataSaver(bool enable) {
+     return ret;
+ }
+ 
+-int BandwidthController::addNaughtyApps(const std::vector<uint32_t>& appUids) {
+-    return manipulateSpecialApps(appUids, IptJumpReject, IptOpInsert);
++int BandwidthController::addNaughtyApps(const std::vector<std::string>& appStrUid) {
++    return manipulateSpecialApps(appStrUid, IptJumpReject, IptOpInsert);
+ }
+ 
+-int BandwidthController::removeNaughtyApps(const std::vector<uint32_t>& appUids) {
+-    return manipulateSpecialApps(appUids, IptJumpReject, IptOpDelete);
++int BandwidthController::removeNaughtyApps(const std::vector<std::string>& appStrUid) {
++    return manipulateSpecialApps(appStrUid, IptJumpReject, IptOpDelete);
+ }
+ 
+-int BandwidthController::addNiceApps(const std::vector<uint32_t>& appUids) {
+-    return manipulateSpecialApps(appUids, IptJumpReturn, IptOpInsert);
++int BandwidthController::addNiceApps(const std::vector<std::string>& appStrUid) {
++    return manipulateSpecialApps(appStrUid, IptJumpReturn, IptOpInsert);
+ }
+ 
+-int BandwidthController::removeNiceApps(const std::vector<uint32_t>& appUids) {
+-    return manipulateSpecialApps(appUids, IptJumpReturn, IptOpDelete);
++int BandwidthController::removeNiceApps(const std::vector<std::string>& appStrUid) {
++    return manipulateSpecialApps(appStrUid, IptJumpReturn, IptOpDelete);
+ }
+ 
+-int BandwidthController::manipulateSpecialApps(const std::vector<uint32_t>& appUids,
++int BandwidthController::manipulateSpecialApps(const std::vector<std::string>& appStrUids,
+                                                IptJumpOp jumpHandling, IptOp op) {
+-    Status status = gCtls->trafficCtrl.updateUidOwnerMap(appUids, jumpHandling, op);
++    Status status = gCtls->trafficCtrl.updateUidOwnerMap(appStrUids, jumpHandling, op);
+     if (!isOk(status)) {
+         ALOGE("unable to update the Bandwidth Uid Map: %s", toString(status).c_str());
+     }
+diff --git a/server/BandwidthController.h b/server/BandwidthController.h
+index fa201570..fe17194f 100644
+--- a/server/BandwidthController.h
++++ b/server/BandwidthController.h
+@@ -45,10 +45,10 @@ public:
+     int getInterfaceQuota(const std::string& iface, int64_t* bytes);
+     int removeInterfaceQuota(const std::string& iface);
+ 
+-    int addNaughtyApps(const std::vector<uint32_t>& appUids);
+-    int removeNaughtyApps(const std::vector<uint32_t>& appUids);
+-    int addNiceApps(const std::vector<uint32_t>& appUids);
+-    int removeNiceApps(const std::vector<uint32_t>& appUids);
++    int addNaughtyApps(const std::vector<std::string>& appStrUid);
++    int removeNaughtyApps(const std::vector<std::string>& appStrUid);
++    int addNiceApps(const std::vector<std::string>& appStrUid);
++    int removeNiceApps(const std::vector<std::string>& appStrUid);
+ 
+     int setGlobalAlert(int64_t bytes);
+     int removeGlobalAlert();
+@@ -89,7 +89,7 @@ public:
+ 
+     std::string makeDataSaverCommand(IptablesTarget target, bool enable);
+ 
+-    int manipulateSpecialApps(const std::vector<uint32_t>& appStrUids, IptJumpOp jumpHandling,
++    int manipulateSpecialApps(const std::vector<std::string>& appStrUids, IptJumpOp jumpHandling,
+                               IptOp appOp);
+ 
+     int runIptablesAlertCmd(IptOp op, const std::string& alertName, int64_t bytes);
+diff --git a/server/NetdNativeService.cpp b/server/NetdNativeService.cpp
+index 1f5dc976..a6580bed 100644
+--- a/server/NetdNativeService.cpp
++++ b/server/NetdNativeService.cpp
+@@ -321,29 +321,29 @@ binder::Status NetdNativeService::bandwidthSetGlobalAlert(int64_t bytes) {
+ 
+ binder::Status NetdNativeService::bandwidthAddNaughtyApp(int32_t uid) {
+     NETD_LOCKING_RPC(gCtls->bandwidthCtrl.lock, PERM_NETWORK_STACK, PERM_MAINLINE_NETWORK_STACK);
+-    std::vector<uint32_t> appUids = {static_cast<uint32_t>(abs(uid))};
+-    int res = gCtls->bandwidthCtrl.addNaughtyApps(appUids);
++    std::vector<std::string> appStrUids = {std::to_string(abs(uid))};
++    int res = gCtls->bandwidthCtrl.addNaughtyApps(appStrUids);
+     return statusFromErrcode(res);
+ }
+ 
+ binder::Status NetdNativeService::bandwidthRemoveNaughtyApp(int32_t uid) {
+     NETD_LOCKING_RPC(gCtls->bandwidthCtrl.lock, PERM_NETWORK_STACK, PERM_MAINLINE_NETWORK_STACK);
+-    std::vector<uint32_t> appUids = {static_cast<uint32_t>(abs(uid))};
+-    int res = gCtls->bandwidthCtrl.removeNaughtyApps(appUids);
++    std::vector<std::string> appStrUids = {std::to_string(abs(uid))};
++    int res = gCtls->bandwidthCtrl.removeNaughtyApps(appStrUids);
+     return statusFromErrcode(res);
+ }
+ 
+ binder::Status NetdNativeService::bandwidthAddNiceApp(int32_t uid) {
+     NETD_LOCKING_RPC(gCtls->bandwidthCtrl.lock, PERM_NETWORK_STACK, PERM_MAINLINE_NETWORK_STACK);
+-    std::vector<uint32_t> appUids = {static_cast<uint32_t>(abs(uid))};
+-    int res = gCtls->bandwidthCtrl.addNiceApps(appUids);
++    std::vector<std::string> appStrUids = {std::to_string(abs(uid))};
++    int res = gCtls->bandwidthCtrl.addNiceApps(appStrUids);
+     return statusFromErrcode(res);
+ }
+ 
+ binder::Status NetdNativeService::bandwidthRemoveNiceApp(int32_t uid) {
+     NETD_LOCKING_RPC(gCtls->bandwidthCtrl.lock, PERM_NETWORK_STACK, PERM_MAINLINE_NETWORK_STACK);
+-    std::vector<uint32_t> appUids = {static_cast<uint32_t>(abs(uid))};
+-    int res = gCtls->bandwidthCtrl.removeNiceApps(appUids);
++    std::vector<std::string> appStrUids = {std::to_string(abs(uid))};
++    int res = gCtls->bandwidthCtrl.removeNiceApps(appStrUids);
+     return statusFromErrcode(res);
+ }
+ 
+diff --git a/server/TrafficController.cpp b/server/TrafficController.cpp
+index 7e29656c..a2e6b3a8 100644
+--- a/server/TrafficController.cpp
++++ b/server/TrafficController.cpp
+@@ -586,7 +586,7 @@ Status TrafficController::addRule(uint32_t uid, UidOwnerMatchType match, uint32_
+     return netdutils::status::ok;
+ }
+ 
+-Status TrafficController::updateUidOwnerMap(const std::vector<uint32_t>& appUids,
++Status TrafficController::updateUidOwnerMap(const std::vector<std::string>& appStrUids,
+                                             BandwidthController::IptJumpOp jumpHandling,
+                                             BandwidthController::IptOp op) {
+     std::lock_guard guard(mMutex);
+@@ -595,7 +595,14 @@ Status TrafficController::updateUidOwnerMap(const std::vector<uint32_t>& appUids
+         return statusFromErrno(
+                 EINVAL, StringPrintf("invalid IptJumpOp: %d, command: %d", jumpHandling, match));
+     }
+-    for (uint32_t uid : appUids) {
++    for (const auto& appStrUid : appStrUids) {
++        char* endPtr;
++        long uid = strtol(appStrUid.c_str(), &endPtr, 10);
++        if ((errno == ERANGE && (uid == LONG_MAX || uid == LONG_MIN)) ||
++            (endPtr == appStrUid.c_str()) || (*endPtr != '\0')) {
++               return statusFromErrno(errno, "invalid uid string:" + appStrUid);
++        }
++
+         if (op == BandwidthController::IptOpDelete) {
+             RETURN_IF_NOT_OK(removeRule(uid, match));
+         } else if (op == BandwidthController::IptOpInsert) {
+diff --git a/server/TrafficController.h b/server/TrafficController.h
+index ceaf0ecd..ba8406c2 100644
+--- a/server/TrafficController.h
++++ b/server/TrafficController.h
+@@ -112,7 +112,7 @@ class TrafficController {
+             EXCLUDES(mMutex);
+     netdutils::Status removeUidInterfaceRules(const std::vector<int32_t>& uids) EXCLUDES(mMutex);
+ 
+-    netdutils::Status updateUidOwnerMap(const std::vector<uint32_t>& appStrUids,
++    netdutils::Status updateUidOwnerMap(const std::vector<std::string>& appStrUids,
+                                         BandwidthController::IptJumpOp jumpHandling,
+                                         BandwidthController::IptOp op) EXCLUDES(mMutex);
+     static const String16 DUMP_KEYWORD;
+diff --git a/server/TrafficControllerTest.cpp b/server/TrafficControllerTest.cpp
+index 6090a66f..5cc95f63 100644
+--- a/server/TrafficControllerTest.cpp
++++ b/server/TrafficControllerTest.cpp
+@@ -16,7 +16,6 @@
+  * TrafficControllerTest.cpp - unit tests for TrafficController.cpp
+  */
+ 
+-#include <cstdint>
+ #include <string>
+ #include <vector>
+ 
+@@ -219,10 +218,10 @@ class TrafficControllerTest : public ::testing::Test {
+         EXPECT_EQ(0, mTc.replaceUidOwnerMap(name, isAllowlist, uids));
+         checkEachUidValue(uids, match);
+     }
+-
+-    void expectUidOwnerMapValues(const std::vector<uint32_t>& appUids, uint8_t expectedRule,
++    void expectUidOwnerMapValues(const std::vector<std::string>& appStrUids, uint8_t expectedRule,
+                                  uint32_t expectedIif) {
+-        for (uint32_t uid : appUids) {
++        for (const std::string& strUid : appStrUids) {
++            uint32_t uid = stoi(strUid);
+             Result<UidOwnerValue> value = mFakeUidOwnerMap.readValue(uid);
+             EXPECT_RESULT_OK(value);
+             EXPECT_EQ(expectedRule, value.value().rule)
+@@ -616,87 +615,91 @@ TEST_F(TrafficControllerTest, TestReplaceSameChain) {
+ }
+ 
+ TEST_F(TrafficControllerTest, TestDenylistUidMatch) {
+-    std::vector<uint32_t> appUids = {1000, 1001, 10012};
+-    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap(appUids, BandwidthController::IptJumpReject,
++    std::vector<std::string> appStrUids = {"1000", "1001", "10012"};
++    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap(appStrUids, BandwidthController::IptJumpReject,
+                                            BandwidthController::IptOpInsert)));
+-    expectUidOwnerMapValues(appUids, PENALTY_BOX_MATCH, 0);
+-    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap(appUids, BandwidthController::IptJumpReject,
++    expectUidOwnerMapValues(appStrUids, PENALTY_BOX_MATCH, 0);
++    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap(appStrUids, BandwidthController::IptJumpReject,
+                                            BandwidthController::IptOpDelete)));
+     expectMapEmpty(mFakeUidOwnerMap);
+ }
+ 
+ TEST_F(TrafficControllerTest, TestAllowlistUidMatch) {
+-    std::vector<uint32_t> appUids = {1000, 1001, 10012};
+-    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap(appUids, BandwidthController::IptJumpReturn,
++    std::vector<std::string> appStrUids = {"1000", "1001", "10012"};
++    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap(appStrUids, BandwidthController::IptJumpReturn,
+                                            BandwidthController::IptOpInsert)));
+-    expectUidOwnerMapValues(appUids, HAPPY_BOX_MATCH, 0);
+-    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap(appUids, BandwidthController::IptJumpReturn,
++    expectUidOwnerMapValues(appStrUids, HAPPY_BOX_MATCH, 0);
++    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap(appStrUids, BandwidthController::IptJumpReturn,
+                                            BandwidthController::IptOpDelete)));
+     expectMapEmpty(mFakeUidOwnerMap);
+ }
+ 
+ TEST_F(TrafficControllerTest, TestReplaceMatchUid) {
+-    std::vector<uint32_t> appUids = {1000, 1001, 10012};
+-    // Add appUids to the denylist and expect that their values are all PENALTY_BOX_MATCH.
+-    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap(appUids, BandwidthController::IptJumpReject,
++    SKIP_IF_BPF_NOT_SUPPORTED;
++
++    std::vector<std::string> appStrUids = {"1000", "1001", "10012"};
++    // Add appStrUids to the denylist and expect that their values are all PENALTY_BOX_MATCH.
++    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap(appStrUids, BandwidthController::IptJumpReject,
+                                            BandwidthController::IptOpInsert)));
+-    expectUidOwnerMapValues(appUids, PENALTY_BOX_MATCH, 0);
++    expectUidOwnerMapValues(appStrUids, PENALTY_BOX_MATCH, 0);
+ 
+     // Add the same UIDs to the allowlist and expect that we get PENALTY_BOX_MATCH |
+     // HAPPY_BOX_MATCH.
+-    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap(appUids, BandwidthController::IptJumpReturn,
++    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap(appStrUids, BandwidthController::IptJumpReturn,
+                                            BandwidthController::IptOpInsert)));
+-    expectUidOwnerMapValues(appUids, HAPPY_BOX_MATCH | PENALTY_BOX_MATCH, 0);
++    expectUidOwnerMapValues(appStrUids, HAPPY_BOX_MATCH | PENALTY_BOX_MATCH, 0);
+ 
+     // Remove the same UIDs from the allowlist and check the PENALTY_BOX_MATCH is still there.
+-    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap(appUids, BandwidthController::IptJumpReturn,
++    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap(appStrUids, BandwidthController::IptJumpReturn,
+                                            BandwidthController::IptOpDelete)));
+-    expectUidOwnerMapValues(appUids, PENALTY_BOX_MATCH, 0);
++    expectUidOwnerMapValues(appStrUids, PENALTY_BOX_MATCH, 0);
+ 
+     // Remove the same UIDs from the denylist and check the map is empty.
+-    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap(appUids, BandwidthController::IptJumpReject,
++    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap(appStrUids, BandwidthController::IptJumpReject,
+                                            BandwidthController::IptOpDelete)));
+     ASSERT_FALSE(mFakeUidOwnerMap.getFirstKey().ok());
+ }
+ 
+ TEST_F(TrafficControllerTest, TestDeleteWrongMatchSilentlyFails) {
+-    std::vector<uint32_t> appUids = {1000, 1001, 10012};
++    std::vector<std::string> appStrUids = {"1000", "1001", "10012"};
++    SKIP_IF_BPF_NOT_SUPPORTED;
++
+     // If the uid does not exist in the map, trying to delete a rule about it will fail.
+-    ASSERT_FALSE(isOk(mTc.updateUidOwnerMap(appUids, BandwidthController::IptJumpReturn,
++    ASSERT_FALSE(isOk(mTc.updateUidOwnerMap(appStrUids, BandwidthController::IptJumpReturn,
+                                             BandwidthController::IptOpDelete)));
+     expectMapEmpty(mFakeUidOwnerMap);
+ 
+-    // Add denylist rules for appUids.
+-    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap(appUids, BandwidthController::IptJumpReturn,
++    // Add denylist rules for appStrUids.
++    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap(appStrUids, BandwidthController::IptJumpReturn,
+                                            BandwidthController::IptOpInsert)));
+-    expectUidOwnerMapValues(appUids, HAPPY_BOX_MATCH, 0);
++    expectUidOwnerMapValues(appStrUids, HAPPY_BOX_MATCH, 0);
+ 
+-    // Delete (non-existent) denylist rules for appUids, and check that this silently does
++    // Delete (non-existent) denylist rules for appStrUids, and check that this silently does
+     // nothing if the uid is in the map but does not have denylist match. This is required because
+     // NetworkManagementService will try to remove a uid from denylist after adding it to the
+     // allowlist and if the remove fails it will not update the uid status.
+-    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap(appUids, BandwidthController::IptJumpReject,
++    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap(appStrUids, BandwidthController::IptJumpReject,
+                                            BandwidthController::IptOpDelete)));
+-    expectUidOwnerMapValues(appUids, HAPPY_BOX_MATCH, 0);
++    expectUidOwnerMapValues(appStrUids, HAPPY_BOX_MATCH, 0);
+ }
+ 
+ TEST_F(TrafficControllerTest, TestAddUidInterfaceFilteringRules) {
+     int iif0 = 15;
+     ASSERT_TRUE(isOk(mTc.addUidInterfaceRules(iif0, {1000, 1001})));
+-    expectUidOwnerMapValues({1000, 1001}, IIF_MATCH, iif0);
++    expectUidOwnerMapValues({"1000", "1001"}, IIF_MATCH, iif0);
+ 
+     // Add some non-overlapping new uids. They should coexist with existing rules
+     int iif1 = 16;
+     ASSERT_TRUE(isOk(mTc.addUidInterfaceRules(iif1, {2000, 2001})));
+-    expectUidOwnerMapValues({1000, 1001}, IIF_MATCH, iif0);
+-    expectUidOwnerMapValues({2000, 2001}, IIF_MATCH, iif1);
++    expectUidOwnerMapValues({"1000", "1001"}, IIF_MATCH, iif0);
++    expectUidOwnerMapValues({"2000", "2001"}, IIF_MATCH, iif1);
+ 
+     // Overwrite some existing uids
+     int iif2 = 17;
+     ASSERT_TRUE(isOk(mTc.addUidInterfaceRules(iif2, {1000, 2000})));
+-    expectUidOwnerMapValues({1001}, IIF_MATCH, iif0);
+-    expectUidOwnerMapValues({2001}, IIF_MATCH, iif1);
+-    expectUidOwnerMapValues({1000, 2000}, IIF_MATCH, iif2);
++    expectUidOwnerMapValues({"1001"}, IIF_MATCH, iif0);
++    expectUidOwnerMapValues({"2001"}, IIF_MATCH, iif1);
++    expectUidOwnerMapValues({"1000", "2000"}, IIF_MATCH, iif2);
+ }
+ 
+ TEST_F(TrafficControllerTest, TestRemoveUidInterfaceFilteringRules) {
+@@ -704,18 +707,18 @@ TEST_F(TrafficControllerTest, TestRemoveUidInterfaceFilteringRules) {
+     int iif1 = 16;
+     ASSERT_TRUE(isOk(mTc.addUidInterfaceRules(iif0, {1000, 1001})));
+     ASSERT_TRUE(isOk(mTc.addUidInterfaceRules(iif1, {2000, 2001})));
+-    expectUidOwnerMapValues({1000, 1001}, IIF_MATCH, iif0);
+-    expectUidOwnerMapValues({2000, 2001}, IIF_MATCH, iif1);
++    expectUidOwnerMapValues({"1000", "1001"}, IIF_MATCH, iif0);
++    expectUidOwnerMapValues({"2000", "2001"}, IIF_MATCH, iif1);
+ 
+     // Rmove some uids
+     ASSERT_TRUE(isOk(mTc.removeUidInterfaceRules({1001, 2001})));
+-    expectUidOwnerMapValues({1000}, IIF_MATCH, iif0);
+-    expectUidOwnerMapValues({2000}, IIF_MATCH, iif1);
++    expectUidOwnerMapValues({"1000"}, IIF_MATCH, iif0);
++    expectUidOwnerMapValues({"2000"}, IIF_MATCH, iif1);
+     checkEachUidValue({1000, 2000}, IIF_MATCH);  // Make sure there are only two uids remaining
+ 
+     // Remove non-existent uids shouldn't fail
+     ASSERT_TRUE(isOk(mTc.removeUidInterfaceRules({2000, 3000})));
+-    expectUidOwnerMapValues({1000}, IIF_MATCH, iif0);
++    expectUidOwnerMapValues({"1000"}, IIF_MATCH, iif0);
+     checkEachUidValue({1000}, IIF_MATCH);  // Make sure there are only one uid remaining
+ 
+     // Remove everything
+@@ -725,26 +728,27 @@ TEST_F(TrafficControllerTest, TestRemoveUidInterfaceFilteringRules) {
+ 
+ TEST_F(TrafficControllerTest, TestUidInterfaceFilteringRulesCoexistWithExistingMatches) {
+     // Set up existing PENALTY_BOX_MATCH rules
+-    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap({1000, 1001, 10012}, BandwidthController::IptJumpReject,
++    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap({"1000", "1001", "10012"},
++                                           BandwidthController::IptJumpReject,
+                                            BandwidthController::IptOpInsert)));
+-    expectUidOwnerMapValues({1000, 1001, 10012}, PENALTY_BOX_MATCH, 0);
++    expectUidOwnerMapValues({"1000", "1001", "10012"}, PENALTY_BOX_MATCH, 0);
+ 
+     // Add some partially-overlapping uid owner rules and check result
+     int iif1 = 32;
+     ASSERT_TRUE(isOk(mTc.addUidInterfaceRules(iif1, {10012, 10013, 10014})));
+-    expectUidOwnerMapValues({1000, 1001}, PENALTY_BOX_MATCH, 0);
+-    expectUidOwnerMapValues({10012}, PENALTY_BOX_MATCH | IIF_MATCH, iif1);
+-    expectUidOwnerMapValues({10013, 10014}, IIF_MATCH, iif1);
++    expectUidOwnerMapValues({"1000", "1001"}, PENALTY_BOX_MATCH, 0);
++    expectUidOwnerMapValues({"10012"}, PENALTY_BOX_MATCH | IIF_MATCH, iif1);
++    expectUidOwnerMapValues({"10013", "10014"}, IIF_MATCH, iif1);
+ 
+     // Removing some PENALTY_BOX_MATCH rules should not change uid interface rule
+-    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap({1001, 10012}, BandwidthController::IptJumpReject,
++    ASSERT_TRUE(isOk(mTc.updateUidOwnerMap({"1001", "10012"}, BandwidthController::IptJumpReject,
+                                            BandwidthController::IptOpDelete)));
+-    expectUidOwnerMapValues({1000}, PENALTY_BOX_MATCH, 0);
+-    expectUidOwnerMapValues({10012, 10013, 10014}, IIF_MATCH, iif1);
++    expectUidOwnerMapValues({"1000"}, PENALTY_BOX_MATCH, 0);
++    expectUidOwnerMapValues({"10012", "10013", "10014"}, IIF_MATCH, iif1);
+ 
+     // Remove all uid interface rules
+     ASSERT_TRUE(isOk(mTc.removeUidInterfaceRules({10012, 10013, 10014})));
+-    expectUidOwnerMapValues({1000}, PENALTY_BOX_MATCH, 0);
++    expectUidOwnerMapValues({"1000"}, PENALTY_BOX_MATCH, 0);
+     // Make sure these are the only uids left
+     checkEachUidValue({1000}, PENALTY_BOX_MATCH);
+ }
+@@ -753,31 +757,31 @@ TEST_F(TrafficControllerTest, TestUidInterfaceFilteringRulesCoexistWithNewMatche
+     int iif1 = 56;
+     // Set up existing uid interface rules
+     ASSERT_TRUE(isOk(mTc.addUidInterfaceRules(iif1, {10001, 10002})));
+-    expectUidOwnerMapValues({10001, 10002}, IIF_MATCH, iif1);
++    expectUidOwnerMapValues({"10001", "10002"}, IIF_MATCH, iif1);
+ 
+     // Add some partially-overlapping doze rules
+     EXPECT_EQ(0, mTc.replaceUidOwnerMap("fw_dozable", true, {10002, 10003}));
+-    expectUidOwnerMapValues({10001}, IIF_MATCH, iif1);
+-    expectUidOwnerMapValues({10002}, DOZABLE_MATCH | IIF_MATCH, iif1);
+-    expectUidOwnerMapValues({10003}, DOZABLE_MATCH, 0);
++    expectUidOwnerMapValues({"10001"}, IIF_MATCH, iif1);
++    expectUidOwnerMapValues({"10002"}, DOZABLE_MATCH | IIF_MATCH, iif1);
++    expectUidOwnerMapValues({"10003"}, DOZABLE_MATCH, 0);
+ 
+     // Introduce a third rule type (powersave) on various existing UIDs
+     EXPECT_EQ(0, mTc.replaceUidOwnerMap("fw_powersave", true, {10000, 10001, 10002, 10003}));
+-    expectUidOwnerMapValues({10000}, POWERSAVE_MATCH, 0);
+-    expectUidOwnerMapValues({10001}, POWERSAVE_MATCH | IIF_MATCH, iif1);
+-    expectUidOwnerMapValues({10002}, POWERSAVE_MATCH | DOZABLE_MATCH | IIF_MATCH, iif1);
+-    expectUidOwnerMapValues({10003}, POWERSAVE_MATCH | DOZABLE_MATCH, 0);
++    expectUidOwnerMapValues({"10000"}, POWERSAVE_MATCH, 0);
++    expectUidOwnerMapValues({"10001"}, POWERSAVE_MATCH | IIF_MATCH, iif1);
++    expectUidOwnerMapValues({"10002"}, POWERSAVE_MATCH | DOZABLE_MATCH | IIF_MATCH, iif1);
++    expectUidOwnerMapValues({"10003"}, POWERSAVE_MATCH | DOZABLE_MATCH, 0);
+ 
+     // Remove all doze rules
+     EXPECT_EQ(0, mTc.replaceUidOwnerMap("fw_dozable", true, {}));
+-    expectUidOwnerMapValues({10000}, POWERSAVE_MATCH, 0);
+-    expectUidOwnerMapValues({10001}, POWERSAVE_MATCH | IIF_MATCH, iif1);
+-    expectUidOwnerMapValues({10002}, POWERSAVE_MATCH | IIF_MATCH, iif1);
+-    expectUidOwnerMapValues({10003}, POWERSAVE_MATCH, 0);
++    expectUidOwnerMapValues({"10000"}, POWERSAVE_MATCH, 0);
++    expectUidOwnerMapValues({"10001"}, POWERSAVE_MATCH | IIF_MATCH, iif1);
++    expectUidOwnerMapValues({"10002"}, POWERSAVE_MATCH | IIF_MATCH, iif1);
++    expectUidOwnerMapValues({"10003"}, POWERSAVE_MATCH, 0);
+ 
+     // Remove all powersave rules, expect ownerMap to only have uid interface rules left
+     EXPECT_EQ(0, mTc.replaceUidOwnerMap("fw_powersave", true, {}));
+-    expectUidOwnerMapValues({10001, 10002}, IIF_MATCH, iif1);
++    expectUidOwnerMapValues({"10001", "10002"}, IIF_MATCH, iif1);
+     // Make sure these are the only uids left
+     checkEachUidValue({10001, 10002}, IIF_MATCH);
+ }
+-- 
+2.37.1
+

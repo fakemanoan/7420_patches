@@ -1,0 +1,31 @@
+From 8c9dcd60a1eb77dc7154967647eafc4dd87683c8 Mon Sep 17 00:00:00 2001
+From: html6405 <peter.schelchshorn@mhs-solutions.at>
+Date: Tue, 15 Feb 2022 16:10:01 +0100
+Subject: [PATCH 17/18] LocationResult.java: don't throw exception on
+ incomplete location.
+
+Change-Id: Ib76d961c0f7721d59968c5581ed0695ff5228cb5
+---
+ location/java/android/location/LocationResult.java | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/location/java/android/location/LocationResult.java b/location/java/android/location/LocationResult.java
+index 8423000b6276..4fc40ab4cd63 100644
+--- a/location/java/android/location/LocationResult.java
++++ b/location/java/android/location/LocationResult.java
+@@ -106,10 +106,10 @@ public final class LocationResult implements Parcelable {
+         final int size = mLocations.size();
+         for (int i = 0; i < size; ++i) {
+             Location location = mLocations.get(i);
+-            if (!location.isComplete()) {
++            /* if (!location.isComplete()) {
+                 throw new IllegalArgumentException(
+                         "incomplete location at index " + i + ": " + mLocations);
+-            }
++            }*/
+             if (location.getElapsedRealtimeNanos() < prevElapsedRealtimeNs) {
+                 throw new IllegalArgumentException(
+                         "incorrectly ordered location at index " + i + ": " + mLocations);
+-- 
+2.37.1
+

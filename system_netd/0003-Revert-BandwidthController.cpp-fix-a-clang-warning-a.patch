@@ -1,0 +1,40 @@
+From 99dc3d21aade5d80de69b4f3151cdcb200468e4a Mon Sep 17 00:00:00 2001
+From: Dominggoes Isakh <drjisakh@gmail.com>
+Date: Tue, 14 Dec 2021 12:00:13 +0100
+Subject: [PATCH 3/9] Revert "BandwidthController.cpp - fix a clang warning:
+ abseil-string-find-startswith"
+
+This reverts commit 6857fa528dbc358d67123b6a6b72a7efbc2533db.
+---
+ server/BandwidthController.cpp | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/server/BandwidthController.cpp b/server/BandwidthController.cpp
+index 1b46234a..dad87756 100644
+--- a/server/BandwidthController.cpp
++++ b/server/BandwidthController.cpp
+@@ -70,7 +70,6 @@ const char BandwidthController::LOCAL_GLOBAL_ALERT[] = "bw_global_alert";
+ auto BandwidthController::iptablesRestoreFunction = execIptablesRestoreWithOutput;
+ 
+ using android::base::Join;
+-using android::base::StartsWith;
+ using android::base::StringAppendF;
+ using android::base::StringPrintf;
+ using android::net::FirewallController;
+@@ -772,11 +771,11 @@ void BandwidthController::parseAndFlushCostlyTables(const std::string& ruleList,
+ 
+     // Find and flush all rules starting with "-N bw_costly_<iface>" except "-N bw_costly_shared".
+     while (std::getline(stream, rule, '\n')) {
+-        if (!StartsWith(rule, NEW_CHAIN_COMMAND)) continue;
++        if (rule.find(NEW_CHAIN_COMMAND) != 0) continue;
+         chainName = rule.substr(NEW_CHAIN_COMMAND.size());
+         ALOGV("parse chainName=<%s> orig line=<%s>", chainName.c_str(), rule.c_str());
+ 
+-        if (!StartsWith(chainName, "bw_costly_") || chainName == std::string("bw_costly_shared")) {
++        if (chainName.find("bw_costly_") != 0 || chainName == std::string("bw_costly_shared")) {
+             continue;
+         }
+ 
+-- 
+2.37.1
+

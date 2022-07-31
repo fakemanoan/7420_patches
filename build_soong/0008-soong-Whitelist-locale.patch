@@ -1,0 +1,25 @@
+From 4dc054779364f5edd3fdbb5400ee09db7a50da27 Mon Sep 17 00:00:00 2001
+From: "Kevin F. Haggerty" <haggertk@lineageos.org>
+Date: Mon, 27 Apr 2020 12:51:08 -0600
+Subject: [PATCH 08/11] soong: Whitelist locale
+
+Change-Id: Ibbc46fe4af567fc1df72c0a234a64be1aa704453
+---
+ ui/build/paths/config.go | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/ui/build/paths/config.go b/ui/build/paths/config.go
+index c6ee3c46c..97f4cfda9 100644
+--- a/ui/build/paths/config.go
++++ b/ui/build/paths/config.go
+@@ -86,6 +86,7 @@ var Configuration = map[string]PathConfig{
+ 	"jar":     Allowed,
+ 	"java":    Allowed,
+ 	"javap":   Allowed,
++	"locale":  Allowed,
+ 	"lsof":    Allowed,
+ 	"nproc":   Allowed,
+ 	"openssl": Allowed,
+-- 
+2.37.1
+

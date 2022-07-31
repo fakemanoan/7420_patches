@@ -1,0 +1,27 @@
+From f64da7a0fba83f106af5b0b1280c822b4328284a Mon Sep 17 00:00:00 2001
+From: Kyle Harrison <khwebmail@gmail.com>
+Date: Wed, 27 Oct 2021 14:54:44 +0100
+Subject: [PATCH 3/4] soong: Update camera_in_mediaserver_defaults
+
+- Add android.hardware.camera.provider@2.7
+
+Change-Id: I1ad534d87ce3b35d0116bccdbc0ac7f70c799c00
+---
+ build/soong/Android.bp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/build/soong/Android.bp b/build/soong/Android.bp
+index 34af118c..574968a4 100644
+--- a/build/soong/Android.bp
++++ b/build/soong/Android.bp
+@@ -295,6 +295,7 @@ camera_in_mediaserver {
+                 "android.hardware.camera.common@1.0",
+                 "android.hardware.camera.device@3.4",
+                 "android.hardware.camera.provider@2.6",
++                "android.hardware.camera.provider@2.7",
+                 "libcameraservice",
+                 "libgui",
+             ],
+-- 
+2.37.1
+

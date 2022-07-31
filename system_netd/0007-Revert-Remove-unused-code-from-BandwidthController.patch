@@ -1,0 +1,73 @@
+From 49575d7f82bd88c0282b6ded3e46a087944cf490 Mon Sep 17 00:00:00 2001
+From: Dominggoes Isakh <drjisakh@gmail.com>
+Date: Tue, 14 Dec 2021 13:16:50 +0100
+Subject: [PATCH 7/9] Revert "Remove unused code from BandwidthController"
+
+This reverts commit 18295e183be9acc054767a9015fbd8e9c5b53dfa.
+---
+ server/BandwidthController.cpp | 24 ++++++++++++++++++++++++
+ server/BandwidthController.h   |  6 ++++++
+ 2 files changed, 30 insertions(+)
+
+diff --git a/server/BandwidthController.cpp b/server/BandwidthController.cpp
+index cfce8c10..88015098 100644
+--- a/server/BandwidthController.cpp
++++ b/server/BandwidthController.cpp
+@@ -263,6 +263,10 @@ std::vector<std::string> getBasicAccountingCommands() {
+     return ipt_basic_accounting_commands;
+ }
+ 
++std::vector<std::string> toStrVec(int num, const char* const strs[]) {
++    return std::vector<std::string>(strs, strs + num);
++}
++
+ }  // namespace
+ 
+ BandwidthController::BandwidthController() {
+@@ -322,6 +326,26 @@ int BandwidthController::enableDataSaver(bool enable) {
+     return ret;
+ }
+ 
++// TODO: Remove after removing these commands in CommandListener
++int BandwidthController::addNaughtyApps(int numUids, const char* const appUids[]) {
++    return manipulateSpecialApps(toStrVec(numUids, appUids), IptJumpReject, IptOpInsert);
++}
++
++// TODO: Remove after removing these commands in CommandListener
++int BandwidthController::removeNaughtyApps(int numUids, const char* const appUids[]) {
++    return manipulateSpecialApps(toStrVec(numUids, appUids), IptJumpReject, IptOpDelete);
++}
++
++// TODO: Remove after removing these commands in CommandListener
++int BandwidthController::addNiceApps(int numUids, const char* const appUids[]) {
++    return manipulateSpecialApps(toStrVec(numUids, appUids), IptJumpReturn, IptOpInsert);
++}
++
++// TODO: Remove after removing these commands in CommandListener
++int BandwidthController::removeNiceApps(int numUids, const char* const appUids[]) {
++    return manipulateSpecialApps(toStrVec(numUids, appUids), IptJumpReturn, IptOpDelete);
++}
++
+ int BandwidthController::addNaughtyApps(const std::vector<std::string>& appStrUid) {
+     return manipulateSpecialApps(appStrUid, IptJumpReject, IptOpInsert);
+ }
+diff --git a/server/BandwidthController.h b/server/BandwidthController.h
+index fe17194f..0c4f4110 100644
+--- a/server/BandwidthController.h
++++ b/server/BandwidthController.h
+@@ -45,6 +45,12 @@ public:
+     int getInterfaceQuota(const std::string& iface, int64_t* bytes);
+     int removeInterfaceQuota(const std::string& iface);
+ 
++    // TODO: Remove after removing these commands in CommandListener
++    int addNaughtyApps(int numUids, const char* const appUids[]);
++    int removeNaughtyApps(int numUids, const char* const appUids[]);
++    int addNiceApps(int numUids, const char* const appUids[]);
++    int removeNiceApps(int numUids, const char* const appUids[]);
++
+     int addNaughtyApps(const std::vector<std::string>& appStrUid);
+     int removeNaughtyApps(const std::vector<std::string>& appStrUid);
+     int addNiceApps(const std::vector<std::string>& appStrUid);
+-- 
+2.37.1
+

@@ -1,0 +1,26 @@
+From efa07824b4ab00d5cd6cb566e8664cf8c1982a23 Mon Sep 17 00:00:00 2001
+From: Dominggoes Isakh <drjisakh@gmail.com>
+Date: Sun, 6 Dec 2020 22:14:25 +0100
+Subject: [PATCH 06/11] Forcely disable TEMPORARY_DISABLE_PATH_RESTRICTIONS
+
+Change-Id: I85bb2942d0be20f7c662570a14212302dc3f0d1f
+---
+ cmd/path_interposer/main.go | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/cmd/path_interposer/main.go b/cmd/path_interposer/main.go
+index cd28b9608..e021f095b 100644
+--- a/cmd/path_interposer/main.go
++++ b/cmd/path_interposer/main.go
+@@ -53,7 +53,7 @@ func main() {
+ 		os.Exit(1)
+ 	}
+ 
+-	disableError := false
++	disableError := true
+ 	if e, ok := os.LookupEnv("TEMPORARY_DISABLE_PATH_RESTRICTIONS"); ok {
+ 		disableError = e == "1" || e == "y" || e == "yes" || e == "on" || e == "true"
+ 	}
+-- 
+2.37.1
+

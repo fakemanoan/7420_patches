@@ -1,0 +1,283 @@
+From 2caf1564dd7b9c7b12b2c0206d442c62ec9a7872 Mon Sep 17 00:00:00 2001
+From: Luca Stefani <luca.stefani.ge1@gmail.com>
+Date: Thu, 7 Oct 2021 22:17:28 +0200
+Subject: [PATCH 03/21] Add AudioSessionInfo
+
+Change-Id: Ic4ff3dc0ec1f6014c64a50e619721dba983508d3
+---
+ media/libaudioclient/Android.bp               | 25 +++++++++++++
+ media/libaudioclient/AudioSystem.cpp          | 36 +++++++++++++++++++
+ .../aidl/android/media/AudioSessionInfo.aidl  | 17 +++++++++
+ .../android/media/IAudioPolicyService.aidl    |  3 ++
+ .../include/media/AudioSystem.h               |  8 +++++
+ .../service/AudioPolicyInterfaceImpl.cpp      | 18 ++++++++++
+ .../audiopolicy/service/AudioPolicyService.h  |  2 ++
+ 7 files changed, 109 insertions(+)
+ create mode 100644 media/libaudioclient/aidl/android/media/AudioSessionInfo.aidl
+
+diff --git a/media/libaudioclient/Android.bp b/media/libaudioclient/Android.bp
+index 3c3d340f76..24166b064f 100644
+--- a/media/libaudioclient/Android.bp
++++ b/media/libaudioclient/Android.bp
+@@ -51,6 +51,7 @@ cc_library_shared {
+         "PolicyAidlConversion.cpp"
+     ],
+     shared_libs: [
++        "audioclient-sessioninfo-aidl-cpp",
+         "audioclient-types-aidl-cpp",
+         "audioflinger-aidl-cpp",
+         "audiopolicy-aidl-cpp",
+@@ -71,6 +72,7 @@ cc_library_shared {
+     include_dirs: ["system/media/audio_utils/include"],
+     export_include_dirs: ["include"],
+     export_shared_lib_headers: [
++        "audioclient-sessioninfo-aidl-cpp",
+         "audioclient-types-aidl-cpp",
+         "audioflinger-aidl-cpp",
+         "audiopolicy-aidl-cpp",
+@@ -297,6 +299,27 @@ aidl_interface {
+     ],
+ }
+ 
++aidl_interface {
++    name: "audioclient-sessioninfo-aidl",
++    unstable: true,
++    host_supported: true,
++    vendor_available: true,
++    double_loadable: true,
++    local_include_dir: "aidl",
++    srcs: [
++        "aidl/android/media/AudioSessionInfo.aidl",
++    ],
++    backend: {
++        cpp: {
++            min_sdk_version: "29",
++            apex_available: [
++                "//apex_available:platform",
++                "com.android.media",
++            ],
++        },
++    },
++}
++
+ aidl_interface {
+     name: "audioclient-types-aidl",
+     unstable: true,
+@@ -358,6 +381,7 @@ aidl_interface {
+     ],
+     imports: [
+         "audio_common-aidl",
++        "audioclient-sessioninfo-aidl",
+         "framework-permission-aidl",
+     ],
+     backend: {
+@@ -474,6 +498,7 @@ aidl_interface {
+     ],
+     imports: [
+         "audio_common-aidl",
++        "audioclient-sessioninfo-aidl",
+         "audioclient-types-aidl",
+         "audiopolicy-types-aidl",
+         "capture_state_listener-aidl",
+diff --git a/media/libaudioclient/AudioSystem.cpp b/media/libaudioclient/AudioSystem.cpp
+index c7967e51e2..b4ddd2abb0 100644
+--- a/media/libaudioclient/AudioSystem.cpp
++++ b/media/libaudioclient/AudioSystem.cpp
+@@ -61,6 +61,7 @@ Mutex AudioSystem::gLockAPS;
+ sp<IAudioFlinger> AudioSystem::gAudioFlinger;
+ sp<AudioSystem::AudioFlingerClient> AudioSystem::gAudioFlingerClient;
+ std::set<audio_error_callback> AudioSystem::gAudioErrorCallbacks;
++audio_session_callback AudioSystem::gAudioSessionCallback = NULL;
+ dynamic_policy_callback AudioSystem::gDynPolicyCallback = NULL;
+ record_config_callback AudioSystem::gRecordConfigCallback = NULL;
+ routing_callback AudioSystem::gRoutingCallback = NULL;
+@@ -780,6 +781,11 @@ status_t AudioSystem::AudioFlingerClient::removeAudioDeviceCallback(
+     gRoutingCallback = cb;
+ }
+ 
++/*static*/ void AudioSystem::setAudioSessionCallback(audio_session_callback cb) {
++    Mutex::Autolock _l(gLock);
++    gAudioSessionCallback = cb;
++}
++
+ // client singleton for AudioPolicyService binder interface
+ // protected by gLockAPS
+ sp<IAudioPolicyService> AudioSystem::gAudioPolicyService;
+@@ -2507,6 +2513,36 @@ Status AudioSystem::AudioPolicyServiceClient::onRoutingUpdated() {
+     return Status::ok();
+ }
+ 
++status_t AudioSystem::listAudioSessions(audio_stream_type_t stream,
++                                        std::vector<media::AudioSessionInfo> *sessions)
++{
++    const sp<IAudioPolicyService>& aps =
++            AudioSystem::get_audio_policy_service();
++    if (aps == 0) {
++        return PERMISSION_DENIED;
++    }
++    media::AudioStreamType streamAidl = VALUE_OR_RETURN_STATUS(
++                legacy2aidl_audio_stream_type_t_AudioStreamType(stream));
++    RETURN_STATUS_IF_ERROR(statusTFromBinderStatus(aps->listAudioSessions(streamAidl, sessions)));
++    return NO_ERROR;
++}
++
++void AudioSystem::AudioPolicyServiceClient::onOutputSessionEffectsUpdate(
++        const media::AudioSessionInfo& info, bool added)
++{
++    ALOGV("AudioPolicyServiceClient::onOutputSessionEffectsUpdate(%d, %d, %d)",
++            info.stream, info.session, added);
++    audio_session_callback cb = NULL;
++    {
++        Mutex::Autolock _l(AudioSystem::gLock);
++        cb = gAudioSessionCallback;
++    }
++
++    if (cb != NULL) {
++        cb(info, added);
++    }
++}
++
+ void AudioSystem::AudioPolicyServiceClient::binderDied(const wp<IBinder>& who __unused) {
+     {
+         Mutex::Autolock _l(mLock);
+diff --git a/media/libaudioclient/aidl/android/media/AudioSessionInfo.aidl b/media/libaudioclient/aidl/android/media/AudioSessionInfo.aidl
+new file mode 100644
+index 0000000000..836d729540
+--- /dev/null
++++ b/media/libaudioclient/aidl/android/media/AudioSessionInfo.aidl
+@@ -0,0 +1,17 @@
++package android.media;
++
++/*
++ * {@hide}
++ */
++parcelable AudioSessionInfo {
++    /** Interpreted as audio_session_t */
++    int session;
++    /** Interpreted as audio_stream_type_t */
++    int stream;
++    /** Interpreted as audio_output_flags_t */
++    int flags;
++    /** Interpreted as audio_channel_mask_t */
++    int channelMask;
++    /** Interpreted as uid_t */
++    int uid;
++}
+diff --git a/media/libaudioclient/aidl/android/media/IAudioPolicyService.aidl b/media/libaudioclient/aidl/android/media/IAudioPolicyService.aidl
+index 5f0a1de347..0a6015cde2 100644
+--- a/media/libaudioclient/aidl/android/media/IAudioPolicyService.aidl
++++ b/media/libaudioclient/aidl/android/media/IAudioPolicyService.aidl
+@@ -38,6 +38,7 @@ import android.media.AudioPortConfig;
+ import android.media.AudioPortRole;
+ import android.media.AudioPortType;
+ import android.media.AudioProductStrategy;
++import android.media.AudioSessionInfo;
+ import android.media.AudioSourceType;
+ import android.media.AudioStreamType;
+ import android.media.AudioUsage;
+@@ -375,4 +376,6 @@ interface IAudioPolicyService {
+     boolean canBeSpatialized(in @nullable AudioAttributesInternal attr,
+                              in @nullable AudioConfig config,
+                              in AudioDevice[] devices);
++
++    void listAudioSessions(AudioStreamType stream, out AudioSessionInfo[] sessions);
+ }
+diff --git a/media/libaudioclient/include/media/AudioSystem.h b/media/libaudioclient/include/media/AudioSystem.h
+index 869bd6e9d7..ef25736918 100644
+--- a/media/libaudioclient/include/media/AudioSystem.h
++++ b/media/libaudioclient/include/media/AudioSystem.h
+@@ -24,6 +24,7 @@
+ #include <android/media/BnAudioPolicyServiceClient.h>
+ #include <android/media/INativeSpatializerCallback.h>
+ #include <android/media/ISpatializer.h>
++#include <android/media/AudioSessionInfo.h>
+ #include <android/content/AttributionSourceState.h>
+ #include <media/AidlConversionUtil.h>
+ #include <media/AudioDeviceTypeAddr.h>
+@@ -72,6 +73,7 @@ typedef void (*record_config_callback)(int event,
+                                        audio_patch_handle_t patchHandle,
+                                        audio_source_t source);
+ typedef void (*routing_callback)();
++typedef void (*audio_session_callback)(const media::AudioSessionInfo& session, bool added);
+ 
+ class IAudioFlinger;
+ class String8;
+@@ -149,6 +151,7 @@ public:
+     static void setDynPolicyCallback(dynamic_policy_callback cb);
+     static void setRecordConfigCallback(record_config_callback);
+     static void setRoutingCallback(routing_callback cb);
++    static void setAudioSessionCallback(audio_session_callback cb);
+ 
+     // Sets the binder to use for accessing the AudioFlinger service. This enables the system server
+     // to grant specific isolated processes access to the audio system. Currently used only for the
+@@ -557,6 +560,9 @@ public:
+     static status_t registerSoundTriggerCaptureStateListener(
+             const sp<CaptureStateListener>& listener);
+ 
++    static status_t listAudioSessions(audio_stream_type_t stream,
++            std::vector<media::AudioSessionInfo> *sessions);
++
+     // ----------------------------------------------------------------------------
+ 
+     class AudioVolumeGroupCallback : public RefBase
+@@ -695,6 +701,7 @@ private:
+                 int32_t patchHandle,
+                 media::AudioSourceType source) override;
+         binder::Status onRoutingUpdated();
++        virtual void onOutputSessionEffectsUpdate(const media::AudioSessionInfo& info, bool added);
+ 
+     private:
+         Mutex                               mLock;
+@@ -722,6 +729,7 @@ private:
+     static dynamic_policy_callback gDynPolicyCallback;
+     static record_config_callback gRecordConfigCallback;
+     static routing_callback gRoutingCallback;
++    static audio_session_callback gAudioSessionCallback;
+ 
+     static size_t gInBuffSize;
+     // previous parameters for recording buffer size queries
+diff --git a/services/audiopolicy/service/AudioPolicyInterfaceImpl.cpp b/services/audiopolicy/service/AudioPolicyInterfaceImpl.cpp
+index 1a0d1aec24..5c713561b9 100644
+--- a/services/audiopolicy/service/AudioPolicyInterfaceImpl.cpp
++++ b/services/audiopolicy/service/AudioPolicyInterfaceImpl.cpp
+@@ -2122,6 +2122,24 @@ Status AudioPolicyService::registerSoundTriggerCaptureStateListener(
+     return Status::ok();
+ }
+ 
++Status AudioPolicyService::listAudioSessions(
++         media::AudioStreamType /*stream*/,
++         std::vector<media::AudioSessionInfo>* /*sessions*/) {
++    sp<AudioPolicyEffects> audioPolicyEffects;
++    {
++        Mutex::Autolock _l(mLock);
++        if (mAudioPolicyManager == nullptr) {
++            return binderStatusFromStatusT(NO_INIT);
++        }
++        audioPolicyEffects = mAudioPolicyEffects;
++    }
++    if (audioPolicyEffects == nullptr) {
++        return binderStatusFromStatusT(NO_INIT);
++    }
++    //audioPolicyEffects->listAudioSessions(stream, sessions);
++    return Status::ok();
++}
++
+ Status AudioPolicyService::setDevicesRoleForCapturePreset(
+         media::AudioSourceType audioSourceAidl,
+         media::DeviceRole roleAidl,
+diff --git a/services/audiopolicy/service/AudioPolicyService.h b/services/audiopolicy/service/AudioPolicyService.h
+index 27c4e1c88e..42bc737073 100644
+--- a/services/audiopolicy/service/AudioPolicyService.h
++++ b/services/audiopolicy/service/AudioPolicyService.h
+@@ -245,6 +245,8 @@ public:
+             std::vector<media::AudioDevice>* _aidl_return) override;
+     binder::Status registerSoundTriggerCaptureStateListener(
+             const sp<media::ICaptureStateListener>& listener, bool* _aidl_return) override;
++    binder::Status listAudioSessions(media::AudioStreamType stream,
++            std::vector<media::AudioSessionInfo> *sessions) override;
+ 
+     binder::Status getSpatializer(const sp<media::INativeSpatializerCallback>& callback,
+             media::GetSpatializerResponse* _aidl_return) override;
+-- 
+2.37.1
+

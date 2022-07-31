@@ -1,0 +1,56 @@
+From 9dc284d9927acac443d821c7f30a1e7a41fc96de Mon Sep 17 00:00:00 2001
+From: html6405 <peter.schelchshorn@mhs-solutions.at>
+Date: Tue, 16 Nov 2021 17:11:55 +0100
+Subject: [PATCH 03/18] DisplayPowerController: make it possible to disable
+ colorfade via overlay.
+
+Change-Id: Icdfd0d3538f1561773c9bba87b6fa3fad3ebd905
+---
+ core/res/res/values/config.xml                                 | 3 +++
+ core/res/res/values/symbols.xml                                | 1 +
+ .../com/android/server/display/DisplayPowerController.java     | 3 ++-
+ 3 files changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/core/res/res/values/config.xml b/core/res/res/values/config.xml
+index 07367aee8f5c..80aab6891676 100644
+--- a/core/res/res/values/config.xml
++++ b/core/res/res/values/config.xml
+@@ -528,6 +528,9 @@
+     <!-- If this is true, the screen will fade off. -->
+     <bool name="config_animateScreenLights">false</bool>
+ 
++    <!-- If this is true, colorfade will be enabled. -->
++    <bool name="config_colorFade_enabled">true</bool>
++
+     <!-- If this is true, key chords can be used to take a screenshot on the device. -->
+     <bool name="config_enableScreenshotChord">true</bool>
+ 
+diff --git a/core/res/res/values/symbols.xml b/core/res/res/values/symbols.xml
+index 7461579af1ee..2535aabdadb0 100644
+--- a/core/res/res/values/symbols.xml
++++ b/core/res/res/values/symbols.xml
+@@ -1926,6 +1926,7 @@
+   <java-symbol type="bool" name="config_adaptive_sleep_available" />
+   <java-symbol type="bool" name="config_camera_autorotate"/>
+   <java-symbol type="bool" name="config_animateScreenLights" />
++  <java-symbol type="bool" name="config_colorFade_enabled" />
+   <java-symbol type="bool" name="config_automatic_brightness_available" />
+   <java-symbol type="bool" name="config_smart_battery_available" />
+   <java-symbol type="bool" name="config_autoBrightnessResetAmbientLuxAfterWarmUp" />
+diff --git a/services/core/java/com/android/server/display/DisplayPowerController.java b/services/core/java/com/android/server/display/DisplayPowerController.java
+index 6ba1ed4dabf8..645ddec12894 100644
+--- a/services/core/java/com/android/server/display/DisplayPowerController.java
++++ b/services/core/java/com/android/server/display/DisplayPowerController.java
+@@ -539,7 +539,8 @@ final class DisplayPowerController implements AutomaticBrightnessController.Call
+ 
+         setUpAutoBrightness(resources, handler);
+ 
+-        mColorFadeEnabled = !ActivityManager.isLowRamDeviceStatic();
++        mColorFadeEnabled = resources.getBoolean(
++                com.android.internal.R.bool.config_colorFade_enabled) && !ActivityManager.isLowRamDeviceStatic();
+         mColorFadeFadesConfig = resources.getBoolean(
+                 com.android.internal.R.bool.config_animateScreenLights);
+ 
+-- 
+2.37.1
+

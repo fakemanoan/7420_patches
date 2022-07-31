@@ -1,0 +1,30 @@
+From e3b720c542a595035a215ef1ea466c106f3d48e9 Mon Sep 17 00:00:00 2001
+From: Shilin Victor <chrono.monochrome@gmail.com>
+Date: Wed, 13 Oct 2021 19:43:58 +0300
+Subject: [PATCH 3/4] art: allow to execute OAT code from /data
+
+Change-Id: I58e3f4365966607dcaad4f790ac4132b2806f406
+---
+ runtime/native/dalvik_system_ZygoteHooks.cc | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/runtime/native/dalvik_system_ZygoteHooks.cc b/runtime/native/dalvik_system_ZygoteHooks.cc
+index 050233dac5..d0d699e373 100644
+--- a/runtime/native/dalvik_system_ZygoteHooks.cc
++++ b/runtime/native/dalvik_system_ZygoteHooks.cc
+@@ -318,10 +318,10 @@ static void ZygoteHooks_nativePostForkChild(JNIEnv* env,
+     runtime_flags &= ~DISABLE_VERIFIER;
+   }
+ 
+-  if ((runtime_flags & ONLY_USE_TRUSTED_OAT_FILES) != 0 || is_system_server) {
++  /*if ((runtime_flags & ONLY_USE_TRUSTED_OAT_FILES) != 0 || is_system_server) {
+     runtime->GetOatFileManager().SetOnlyUseTrustedOatFiles();
+     runtime_flags &= ~ONLY_USE_TRUSTED_OAT_FILES;
+-  }
++  }*/
+ 
+   api_enforcement_policy = hiddenapi::EnforcementPolicyFromInt(
+       (runtime_flags & HIDDEN_API_ENFORCEMENT_POLICY_MASK) >> API_ENFORCEMENT_POLICY_SHIFT);
+-- 
+2.37.1
+

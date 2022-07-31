@@ -1,0 +1,34 @@
+From fb97396224435f235f164388635da35e3714165e Mon Sep 17 00:00:00 2001
+From: html6405 <peter.schelchshorn@mhs-solutions.at>
+Date: Sun, 26 Dec 2021 18:58:25 +0100
+Subject: [PATCH 2/3] build: make: core: sysprop.mk: HACK, set BUILD_KEYS to
+ dev-keys.
+
+Change-Id: Icf697d99f8e99746dce1041702d7f5a8ae361163
+---
+ core/sysprop.mk | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/core/sysprop.mk b/core/sysprop.mk
+index 5dc0ec1f69..58e32013e0 100644
+--- a/core/sysprop.mk
++++ b/core/sysprop.mk
+@@ -149,11 +149,11 @@ endif
+ # non-default dev keys (usually private keys from a vendor directory).
+ # Both of these tags will be removed and replaced with "release-keys"
+ # when the target-files is signed in a post-build step.
+-ifeq ($(DEFAULT_SYSTEM_DEV_CERTIFICATE),build/make/target/product/security/testkey)
+-BUILD_KEYS := test-keys
+-else
++# ifeq ($(DEFAULT_SYSTEM_DEV_CERTIFICATE),build/make/target/product/security/testkey)
++# BUILD_KEYS := test-keys
++# else
+ BUILD_KEYS := dev-keys
+-endif
++# endif
+ BUILD_VERSION_TAGS += $(BUILD_KEYS)
+ BUILD_VERSION_TAGS := $(subst $(space),$(comma),$(sort $(BUILD_VERSION_TAGS)))
+ 
+-- 
+2.37.1
+

@@ -1,0 +1,35 @@
+From b57c8a709f1b1ca2ebdf8b70689d0752dfb3ecc5 Mon Sep 17 00:00:00 2001
+From: Dominggoes Isakh <drjisakh@gmail.com>
+Date: Mon, 3 Jan 2022 01:01:03 +0100
+Subject: [PATCH 4/4] kernel: Add BOARD_CUSTOM_KERNEL_MK support
+
+Allow KERNEL_OUT to be overriden for eg. building embedded uncompressed
+ramdisk before building the kernel.
+
+Change-Id: I06ad3f1eed1bf174bb6fb294388c2912e0a590d8
+---
+ build/tasks/kernel.mk | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/build/tasks/kernel.mk b/build/tasks/kernel.mk
+index 9f17c3d8..ece421bc 100644
+--- a/build/tasks/kernel.mk
++++ b/build/tasks/kernel.mk
+@@ -383,8 +383,14 @@ MODULES_INTERMEDIATES := $(KERNEL_BUILD_OUT_PREFIX)$(call intermediates-dir-for,
+ KERNEL_VENDOR_RAMDISK_DEPMOD_STAGING_DIR := $(KERNEL_BUILD_OUT_PREFIX)$(call intermediates-dir-for,PACKAGING,depmod_vendor_ramdisk)
+ $(INTERNAL_VENDOR_RAMDISK_TARGET): $(TARGET_PREBUILT_INT_KERNEL)
+ 
++ifdef BOARD_CUSTOM_KERNEL_MK
++include $(BOARD_CUSTOM_KERNEL_MK)
++endif
++
++ifndef BOARD_CUSTOM_KERNEL_MK
+ $(KERNEL_OUT):
+ 	mkdir -p $(KERNEL_OUT)
++endif
+ 
+ $(KERNEL_CONFIG): $(KERNEL_OUT) $(ALL_KERNEL_DEFCONFIG_SRCS)
+ 	@echo "Building Kernel Config"
+-- 
+2.37.1
+

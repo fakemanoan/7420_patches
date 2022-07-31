@@ -1,0 +1,45 @@
+From 9b54a878164fc4aad67e31a00056a995e14e34fb Mon Sep 17 00:00:00 2001
+From: html6405 <peter.schelchshorn@mhs-solutions.at>
+Date: Thu, 10 Feb 2022 18:03:05 +0100
+Subject: [PATCH 11/14] UiccController.java: onGetIccCardStatusDone: ignore
+ exception for fakeiccid devices.
+
+Change-Id: Ibe2a85a9c5707f5e1394c04f3514478f0e9ededb
+---
+ .../internal/telephony/uicc/UiccController.java     | 13 ++++++++-----
+ 1 file changed, 8 insertions(+), 5 deletions(-)
+
+diff --git a/src/java/com/android/internal/telephony/uicc/UiccController.java b/src/java/com/android/internal/telephony/uicc/UiccController.java
+index 0fcaa0d53b..d6137f91ee 100644
+--- a/src/java/com/android/internal/telephony/uicc/UiccController.java
++++ b/src/java/com/android/internal/telephony/uicc/UiccController.java
+@@ -55,6 +55,7 @@ import com.android.internal.telephony.SubscriptionInfoUpdater;
+ import com.android.internal.telephony.uicc.euicc.EuiccCard;
+ import com.android.internal.telephony.util.TelephonyUtils;
+ import com.android.telephony.Rlog;
++import com.android.internal.telephony.RIL;
+ 
+ import java.io.FileDescriptor;
+ import java.io.PrintWriter;
+@@ -684,11 +685,13 @@ public class UiccController extends Handler {
+     }
+ 
+     private synchronized void onGetIccCardStatusDone(AsyncResult ar, Integer index) {
+-        if (ar.exception != null) {
+-            Rlog.e(LOG_TAG,"Error getting ICC status. "
+-                    + "RIL_REQUEST_GET_ICC_STATUS should "
+-                    + "never return an error", ar.exception);
+-            return;
++        if (!RIL.needsOldRilFeature("fakeiccid")) {
++            if (ar.exception != null) {
++                Rlog.e(LOG_TAG, "Error getting ICC status. "
++                        + "RIL_REQUEST_GET_ICC_STATUS should "
++                        + "never return an error", ar.exception);
++                return;
++            }
+         }
+         if (!isValidPhoneIndex(index)) {
+             Rlog.e(LOG_TAG,"onGetIccCardStatusDone: invalid index : " + index);
+-- 
+2.37.1
+
