@@ -1,27 +1,28 @@
-From 3f6c8d96f2ac42fa4ff974c12cbf673f0b66cfe6 Mon Sep 17 00:00:00 2001
+From c0ec20f2f48d06ff87d3464573568d2c7d1e19c5 Mon Sep 17 00:00:00 2001
 From: Dominggoes Isakh <drjisakh@gmail.com>
 Date: Thu, 25 Nov 2021 21:42:23 +0100
 Subject: [PATCH 2/2] Bring back isBpfSupported-method, but using
  ro.kernel.ebpf.supported
 
+Change-Id: Ia1122e719b3f7e8302df8ef2cd6128002a291b0c
 ---
  bpfloader/BpfLoader.cpp               | 2 +-
  libbpf_android/include/bpf/BpfUtils.h | 4 ++++
  2 files changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/bpfloader/BpfLoader.cpp b/bpfloader/BpfLoader.cpp
-index cf6eb24..25ed0ca 100644
+index 788009e..2fe4754 100644
 --- a/bpfloader/BpfLoader.cpp
 +++ b/bpfloader/BpfLoader.cpp
 @@ -112,7 +112,7 @@ void createSysFsBpfSubDir(const char* const prefix) {
  }
  
  int main() {
--    bool ebpf_supported = android::base::GetBoolProperty("ro.kernel.ebpf.supported", false);
+-    bool ebpf_supported = android::base::GetBoolProperty("ro.kernel.ebpf.supported", true);
 +    bool ebpf_supported = android::bpf::isBpfSupported();
+ 
      if (ebpf_supported) {
          // Load all ELF objects, create programs and maps, and pin them
-         for (const auto location : locations) {
 diff --git a/libbpf_android/include/bpf/BpfUtils.h b/libbpf_android/include/bpf/BpfUtils.h
 index 8fd2a4a..b43dc32 100644
 --- a/libbpf_android/include/bpf/BpfUtils.h
@@ -45,5 +46,5 @@ index 8fd2a4a..b43dc32 100644
  static inline bool isAtLeastKernelVersion(unsigned major, unsigned minor, unsigned sub) {
      return kernelVersion() >= KVER(major, minor, sub);
 -- 
-2.37.1
+2.17.1
 

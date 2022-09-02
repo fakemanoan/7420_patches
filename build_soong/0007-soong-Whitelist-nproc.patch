@@ -1,0 +1,25 @@
+From 557abfad6cc7d0404bfd56b2201afb42089af9d2 Mon Sep 17 00:00:00 2001
+From: Sam Mortimer <sam@mortimer.me.uk>
+Date: Wed, 4 Sep 2019 22:52:59 -0700
+Subject: [PATCH 7/7] soong: Whitelist nproc
+
+Change-Id: Ie83688c900a241728b1153cc8ac2aeccc2cb31f6
+---
+ ui/build/paths/config.go | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/ui/build/paths/config.go b/ui/build/paths/config.go
+index 81c500d2b..c6ee3c46c 100644
+--- a/ui/build/paths/config.go
++++ b/ui/build/paths/config.go
+@@ -87,6 +87,7 @@ var Configuration = map[string]PathConfig{
+ 	"java":    Allowed,
+ 	"javap":   Allowed,
+ 	"lsof":    Allowed,
++	"nproc":   Allowed,
+ 	"openssl": Allowed,
+ 	"pstree":  Allowed,
+ 	"rsync":   Allowed,
+-- 
+2.17.1
+

@@ -1,4 +1,4 @@
-From aedbab046309779fa16ce254a02c42e42f6efb12 Mon Sep 17 00:00:00 2001
+From 10c79f0bad8f41d187e2c7fe3327a4a1de8ecb5a Mon Sep 17 00:00:00 2001
 From: Arne Coucheron <arco68@gmail.com>
 Date: Thu, 7 Oct 2021 12:59:15 +0100
 Subject: [PATCH] adb: Bring back support for legacy FunctionFS
@@ -852,5 +852,5 @@ index 00000000..777edde0
 +#endif
 +}
 -- 
-2.37.1
+2.17.1
 

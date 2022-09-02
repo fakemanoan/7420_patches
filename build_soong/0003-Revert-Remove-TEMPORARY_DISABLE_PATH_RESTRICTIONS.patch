@@ -1,0 +1,68 @@
+From 10f28c1b09839784166159ac7a9dfb95759b2b27 Mon Sep 17 00:00:00 2001
+From: Shilin Victor <chrono.monochrome@gmail.com>
+Date: Tue, 12 Oct 2021 15:20:09 +0300
+Subject: [PATCH 3/7] Revert "Remove TEMPORARY_DISABLE_PATH_RESTRICTIONS"
+
+This reverts commit 347ba75679f4a2af4b602a274ad1e6acfe4dade0.
+
+Change-Id: I7c3476221089c8ecae4583a77b0b811ab0fba2d8
+---
+ cmd/path_interposer/main.go | 11 ++++++++++-
+ ui/build/path.go            |  4 ----
+ 2 files changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/cmd/path_interposer/main.go b/cmd/path_interposer/main.go
+index a4fe3e489..cd28b9608 100644
+--- a/cmd/path_interposer/main.go
++++ b/cmd/path_interposer/main.go
+@@ -53,7 +53,14 @@ func main() {
+ 		os.Exit(1)
+ 	}
+ 
++	disableError := false
++	if e, ok := os.LookupEnv("TEMPORARY_DISABLE_PATH_RESTRICTIONS"); ok {
++		disableError = e == "1" || e == "y" || e == "yes" || e == "on" || e == "true"
++	}
++
+ 	exitCode, err := Main(os.Stdout, os.Stderr, interposer, os.Args, mainOpts{
++		disableError: disableError,
++
+ 		sendLog:       paths.SendLog,
+ 		config:        paths.GetConfig,
+ 		lookupParents: lookupParents,
+@@ -72,6 +79,8 @@ If a tool isn't in the allowed list, a log will be posted to the unix domain
+ socket at <interposer>_log.`)
+ 
+ type mainOpts struct {
++	disableError bool
++
+ 	sendLog       func(logSocket string, entry *paths.LogEntry, done chan interface{})
+ 	config        func(name string) paths.PathConfig
+ 	lookupParents func() []paths.LogProcess
+@@ -122,7 +131,7 @@ func Main(stdout, stderr io.Writer, interposer string, args []string, opts mainO
+ 			}, waitForLog)
+ 			defer func() { <-waitForLog }()
+ 		}
+-		if config.Error {
++		if config.Error && !opts.disableError {
+ 			return 1, fmt.Errorf("%q is not allowed to be used. See https://android.googlesource.com/platform/build/+/master/Changes.md#PATH_Tools for more information.", base)
+ 		}
+ 	}
+diff --git a/ui/build/path.go b/ui/build/path.go
+index 86e61c0da..3a8f0eb42 100644
+--- a/ui/build/path.go
++++ b/ui/build/path.go
+@@ -214,10 +214,6 @@ func SetupPath(ctx Context, config Config) {
+ 		execs = append(execs, parsePathDir(pathEntry)...)
+ 	}
+ 
+-	if config.Environment().IsEnvTrue("TEMPORARY_DISABLE_PATH_RESTRICTIONS") {
+-		ctx.Fatalln("TEMPORARY_DISABLE_PATH_RESTRICTIONS was a temporary migration method, and is now obsolete.")
+-	}
+-
+ 	// Create symlinks from the path_interposer binary to all binaries for each
+ 	// directory in the original $PATH. This ensures that during the build,
+ 	// every call to a binary that's expected to be in the $PATH will be
+-- 
+2.17.1
+
