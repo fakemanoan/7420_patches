@@ -1,2 +1,8 @@
 # Exynos 7420 patches for Lineage 19.1
-These are the patches required to get lineage os 19.1 built and booted. Intended to be used with my device trees. 
+Patches required for Exynos 7420 devices to allow them to work properly. 
+
+Patches required for booting:
+EBPF
+Netd
+
+Using older kernels requires older build_soong patches. Look back in the commit history for that.
