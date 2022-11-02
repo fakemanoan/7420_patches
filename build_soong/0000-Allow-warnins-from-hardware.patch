@@ -1,0 +1,27 @@
+From 62b5b68a7cb68025b087144c1a273e470c384387 Mon Sep 17 00:00:00 2001
+From: Fakeman <55951275+fakemanoan@users.noreply.github.com>
+Date: Wed, 2 Nov 2022 10:55:02 +0000
+Subject: [PATCH] Allow warnins from hardware/
+
+Fixes our build since samsung_slsi throws errors
+
+Change-Id: I339870d69b6b0af7e7330c9730ed9317798eed08
+---
+ cc/config/global.go | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/cc/config/global.go b/cc/config/global.go
+index ae731b203..c4f3172e0 100644
+--- a/cc/config/global.go
++++ b/cc/config/global.go
+@@ -152,6 +152,7 @@ var (
+ 	WarningAllowedProjects = []string{
+ 		"device/",
+ 		"vendor/",
++		"hardware/",
+ 	}
+ 
+ 	// Directories with warnings from Android.mk files.
+-- 
+2.25.1
+
