@@ -1,0 +1,26 @@
+From 58362cab01b020dd3d16e5290010e514551febff Mon Sep 17 00:00:00 2001
+From: Fakeman <55951275+fakemanoan@users.noreply.github.com>
+Date: Wed, 2 Nov 2022 10:53:16 +0000
+Subject: [PATCH] Disable adb secure
+
+Change-Id: I2dea7eab1bf8644e84f0c1b8f3dc21ef2c5fdda6
+---
+ config/common.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/config/common.mk b/config/common.mk
+index 82e3e9fb..b47fcc77 100644
+--- a/config/common.mk
++++ b/config/common.mk
+@@ -18,7 +18,7 @@ ifeq ($(TARGET_BUILD_VARIANT),eng)
+ PRODUCT_SYSTEM_DEFAULT_PROPERTIES += ro.adb.secure=0
+ else
+ # Enable ADB authentication
+-PRODUCT_SYSTEM_DEFAULT_PROPERTIES += ro.adb.secure=1
++PRODUCT_SYSTEM_DEFAULT_PROPERTIES += ro.adb.secure=0
+ 
+ # Disable extra StrictMode features on all non-engineering builds
+ PRODUCT_SYSTEM_DEFAULT_PROPERTIES += persist.sys.strictmode.disable=true
+-- 
+2.25.1
+
