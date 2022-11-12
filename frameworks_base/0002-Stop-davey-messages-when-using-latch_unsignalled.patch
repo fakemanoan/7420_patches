@@ -1,0 +1,45 @@
+From b82e0305cfef74531845a2f8fde1f50341b5a12a Mon Sep 17 00:00:00 2001
+From: Fakeman <55951275+fakemanoan@users.noreply.github.com>
+Date: Sat, 12 Nov 2022 13:50:24 +0000
+Subject: [PATCH] Stop davey messages when using latch_unsignalled
+
+Change-Id: I323c1d2adaff085bfbfe3ca730eaeeb816d35424
+---
+ libs/hwui/renderthread/CanvasContext.cpp | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/libs/hwui/renderthread/CanvasContext.cpp b/libs/hwui/renderthread/CanvasContext.cpp
+index a066e6f7c693..d4969b6d2c09 100644
+--- a/libs/hwui/renderthread/CanvasContext.cpp
++++ b/libs/hwui/renderthread/CanvasContext.cpp
+@@ -18,15 +18,16 @@
+ 
+ #include <apex/window.h>
+ #include <fcntl.h>
++#include <gui/TraceUtils.h>
+ #include <strings.h>
+ #include <sys/stat.h>
++#include <ui/Fence.h>
+ 
+ #include <algorithm>
+ #include <cstdint>
+ #include <cstdlib>
+ #include <functional>
+ 
+-#include <gui/TraceUtils.h>
+ #include "../Properties.h"
+ #include "AnimationContext.h"
+ #include "Frame.h"
+@@ -703,6 +704,9 @@ void CanvasContext::onSurfaceStatsAvailable(void* context, ASurfaceControl* cont
+             instance->mRenderThread.getASurfaceControlFunctions();
+ 
+     nsecs_t gpuCompleteTime = functions.getAcquireTimeFunc(stats);
++        if (gpuCompleteTime == Fence::SIGNAL_TIME_PENDING) {
++        gpuCompleteTime = -1;
++    }
+     uint64_t frameNumber = functions.getFrameNumberFunc(stats);
+ 
+     FrameInfo* frameInfo = instance->getFrameInfoFromLast4(frameNumber);
+-- 
+2.25.1
+
